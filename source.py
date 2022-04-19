@@ -6,6 +6,7 @@ import csv
 import numpy
 from sklearn.cluster import KMeans
 from sklearn.pipeline import make_pipeline
+from spacy import displacy
 
 # Initialise dependency libraries
 nlp = spacy.load("en_core_web_sm")
@@ -15,8 +16,8 @@ afinn = Afinn()
 # Text Parsing
 
 # Read and parse the text from neighbouring files
-# filename = "textfile.txt"
-filename = "submissiontext.txt"
+filename = "textfile.txt"
+# filename = "submissiontext.txt"
 textFilePath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
 file = open(textFilePath, "r")
 doc = nlp(file.read())
@@ -26,6 +27,7 @@ file.close()
 # Headers for each table
 header1 = ['Text', 'Named Entity', 'Is in NE?', 'NE Type', 'Governor', 'Sentiment - Token', 'Sentiment - Sentence']
 header2 = ['Text', 'NE Type', 'Governor', 'Sentiment - Token', 'Sentiment - Sentence']
+header3 = ['Sentences']
 
 # Tracker variables for determining Named Entity
 mergedEntity = ''
@@ -39,7 +41,9 @@ table1 = []
 floatTable1 = []
 table2 = []
 floatTable2 = []
+table3 = []
 
+# Get token data T1
 for token in doc:
     # Determine which named entity the token belongs to
     # NOTE - Prior to the assignment clarification, I had assumed the field "NE?" to mean "What NE is this token in?"
@@ -76,7 +80,7 @@ for token in doc:
     floatTable1.append(floatRow)
     rowNumber += 1
 
-
+# Get entity data T2
 for ent in doc.ents:
     # String to float algorithm: Sum of word vector
     textToFloat = 0
@@ -88,8 +92,13 @@ for ent in doc.ents:
     floatTable2.append(floatRow)
     table2.append(row)
 
+# Get sentence data
+for sent in doc.sents:
+    table3.append(sent.text_with_ws)
+
 with open('parsing.csv', "w", newline='') as outfile:
     writer = csv.writer(outfile)
+
     writer.writerow(header1)
     writer.writerows(table1)
 
@@ -98,10 +107,16 @@ with open('parsing.csv', "w", newline='') as outfile:
     writer.writerow(header2)
     writer.writerows(table2)
 
+    writer.writerow([])
+
+    writer.writerow(header3)
+    for row in table3:
+        writer.writerow([row])
+
 
 # K-Means Clustering
 
-k = 3       # K value for k-means clustering
+k = 2       # K value for k-means clustering
 
 # Generate the k-means clustering engine using random starting points
 kmeans1 = KMeans(init="random", n_clusters=k)
@@ -132,7 +147,7 @@ for cluster in range(0, k):
 
 
 # Write the cluster contents to csv
-with open('kmeans.csv', "w", newline='') as outfile:
+with open(str(k) + 'means.csv', "w", newline='') as outfile:
     writer = csv.writer(outfile)
 
     # Print table 1
@@ -169,3 +184,7 @@ with open('kmeans.csv', "w", newline='') as outfile:
             continue
         writer.writerow(["CLUSTER " + str(cluster[0])])
         writer.writerows(cluster[1])
+    
+
+# Display dependency graph
+displacy.serve(doc, style="dep", options= {"compact": True})
